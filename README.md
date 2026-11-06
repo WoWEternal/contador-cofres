@@ -5,7 +5,13 @@ Contador para Fortnite con atajos de teclado.
 - Flecha arriba: suma 1
 - Flecha abajo: resta 1
 - Puedes escribir un número en "Cambiar a:" y pulsar Aplicar para continuar desde ahí.
-- El valor se guarda automáticamente.
+- Botón "Mostrar": abre un contador pequeño con el cofre y el número.
+- El valor y la posición se guardan automáticamente.
+
+## Fuente y plantilla
+
+- `plantilla.png`: imagen del cofre con la barra vacía (se puede cambiar por otra del mismo tipo).
+- `fuentes/`: coloca aquí `Retro Blendy.otf` (descárgala en dafont.com). Es gratis solo para uso personal, así que si subes el proyecto a GitHub, hazlo en un repositorio **privado** o no incluyas la fuente.
 
 ## Descargar
 

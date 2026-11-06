@@ -1,0 +1,5 @@
+Pon aqui el archivo de la fuente:  Retro Blendy.otf
+(descargala de https://www.dafont.com/es/retro-blendy.font y extrae el .otf en esta carpeta)
+
+Si el archivo no esta, el contador usara una fuente normal de Windows.
+Ojo: Retro Blendy es gratis solo para uso personal.
