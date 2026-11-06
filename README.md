@@ -10,7 +10,8 @@ Contador para Fortnite con atajos de teclado.
 
 ## Fuente y plantilla
 
-- `plantilla.png`: imagen del cofre con la barra vacía (se puede cambiar por otra del mismo tipo).
+- `plantillas/`: imagen del cofre con la barra vacía en varios tamaños (30 % a 100 %). El tamaño se elige con el control deslizante de la ventana principal.
+- `icono.ico` / `icono.png`: icono de la aplicación.
 - `fuentes/`: coloca aquí `Retro Blendy.otf` (descárgala en dafont.com). Es gratis solo para uso personal, así que si subes el proyecto a GitHub, hazlo en un repositorio **privado** o no incluyas la fuente.
 
 ## Descargar

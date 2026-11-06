@@ -21,6 +21,7 @@ poder ver el contador encima del juego.
 
 import json
 import os
+import re
 import sys
 import tkinter as tk
 import tkinter.font as tkfont
@@ -43,13 +44,18 @@ COLOR_FONDO = "#161f29"
 COLOR_NUMERO = "#66f2cf"
 
 # Plantilla y fuente
-PLANTILLA = "plantilla.png"          # imagen del cofre con la barra vacía
+CARPETA_PLANTILLAS = "plantillas"    # plantilla_30.png ... plantilla_100.png
+BASE_ANCHO = 440                     # ancho (px) de la plantilla al 100 %
+ESCALA_MIN, ESCALA_MAX, ESCALA_PASO = 30, 100, 5
+ESCALA_INICIAL = 60                  # tamaño por defecto del contador (%)
+ICONO_ICO = "icono.ico"
+ICONO_PNG = "icono.png"
 CARPETA_FUENTES = "fuentes"          # aquí va "Retro Blendy.otf"
 FUENTE_RESPALDO = "Segoe UI"         # si no se encuentra Retro Blendy
 # Espacio (en píxeles de la plantilla) donde se escribe el número:
 # izquierda, arriba, derecha, abajo
-AREA_NUMERO = (130, 24, 408, 88)
-TAM_FUENTE_MAX = 40                  # tamaño máximo; se reduce si no cabe
+AREA_NUMERO = (130, 20, 408, 92)
+TAM_FUENTE_MAX = 50                  # tamaño al 100 %; se reduce si no cabe
 # -----------------------------------------------
 
 
@@ -64,6 +70,26 @@ def ruta_recurso(*partes):
         if os.path.exists(ruta):
             return ruta
     return None
+
+
+def cargar_plantilla(escala):
+    """Carga la imagen de la plantilla cuyo tamaño se acerque más a `escala`."""
+    carpeta = ruta_recurso(CARPETA_PLANTILLAS)
+    if not carpeta:
+        return None
+    mejor = None
+    for nombre in os.listdir(carpeta):
+        m = re.fullmatch(r"plantilla_(\d+)\.png", nombre)
+        if m:
+            dif = abs(int(m.group(1)) - escala)
+            if mejor is None or dif < mejor[0]:
+                mejor = (dif, nombre)
+    if mejor is None:
+        return None
+    try:
+        return tk.PhotoImage(file=os.path.join(carpeta, mejor[1]))
+    except tk.TclError:
+        return None
 
 
 def cargar_fuente_retro(root):
@@ -175,13 +201,7 @@ class Contador:
         except tk.TclError:
             pass  # solo existe en Windows
 
-        self.imagen = None
-        ruta = ruta_recurso(PLANTILLA)
-        if ruta:
-            try:
-                self.imagen = tk.PhotoImage(file=ruta)
-            except tk.TclError:
-                self.imagen = None
+        self.imagen = cargar_plantilla(app.escala)
 
         alto = self.imagen.height() if self.imagen else self.ALTO_RESPALDO
         ancho = self.imagen.width() if self.imagen else 200
@@ -208,8 +228,12 @@ class Contador:
 
     def dibujar(self):
         texto = str(self.app.cuenta)
+        k = 1.0
         if self.imagen:
-            izq, arr, der, aba = AREA_NUMERO
+            k = self.imagen.width() / BASE_ANCHO
+            izq, arr, der, aba = (v * k for v in AREA_NUMERO)
+            self.canvas.config(width=self.imagen.width(),
+                               height=self.imagen.height())
             self.canvas.delete("all")
             self.canvas.create_image(0, 0, image=self.imagen, anchor="nw")
         else:
@@ -224,15 +248,18 @@ class Contador:
             dibujar_cofre(self.canvas, 26, 11, 0.62)
             izq, arr, der, aba = 28 + 72 + 10, 5, ancho - 20, self.ALTO_RESPALDO - 5
 
-        # Reduce el tamaño si el número no cabe en el espacio disponible
-        tam = TAM_FUENTE_MAX
+        # Tamaño del número: crece con el contador y se reduce si no cabe
+        tam = max(8, int(min(TAM_FUENTE_MAX * k, (aba - arr) * 0.95)))
         self.fuente.config(size=-tam)
-        while tam > 10 and (self.fuente.measure(texto) > der - izq
-                            or self.fuente.metrics("linespace") > aba - arr):
+        while tam > 8 and self.fuente.measure(texto) > der - izq:
             tam -= 1
             self.fuente.config(size=-tam)
         self.canvas.create_text((izq + der) / 2, (arr + aba) / 2, text=texto,
                                 anchor="center", font=self.fuente, fill=COLOR_NUMERO)
+
+    def cambiar_escala(self):
+        self.imagen = cargar_plantilla(self.app.escala)
+        self.dibujar()
 
     def empezar_arrastre(self, e):
         self._dx = e.x_root - self.win.winfo_x()
@@ -251,12 +278,14 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Contador de cofres")
-        self.root.geometry("300x270")
+        self.root.geometry("300x350")
         self.root.resizable(False, False)
         self.root.configure(bg="#1b1d2a")
 
+        self.poner_icono()
         self.familia_fuente = cargar_fuente_retro(root)
         self.pos = (60, 60)
+        self.escala = ESCALA_INICIAL
         self.cuenta = self.cargar()
         self.contador = None
         self.prev_sumar = False
@@ -288,6 +317,22 @@ class App:
         self.entrada.bind("<Return>", lambda e: self.aplicar())
         tk.Button(fila2, text="Aplicar", command=self.aplicar).pack(side="left")
 
+        fila_t = tk.Frame(root, bg=fondo)
+        fila_t.pack(pady=(2, 0))
+        tk.Label(fila_t, text="Tamaño del contador:", bg=fondo,
+                 fg=texto).pack(side="left")
+        self.lbl_escala = tk.Label(fila_t, text=f"{self.escala}%", bg=fondo,
+                                   fg="#ffd24d", width=5,
+                                   font=("Segoe UI", 10, "bold"))
+        self.lbl_escala.pack(side="left")
+        self.slider = tk.Scale(root, from_=ESCALA_MIN, to=ESCALA_MAX,
+                               resolution=ESCALA_PASO, orient="horizontal",
+                               showvalue=False, length=240, bg=fondo,
+                               troughcolor="#2a2d40", highlightthickness=0,
+                               command=self.cambiar_escala)
+        self.slider.set(self.escala)
+        self.slider.pack()
+
         fila3 = tk.Frame(root, bg=fondo)
         fila3.pack(pady=6)
         self.btn_mostrar = tk.Button(fila3, text="Mostrar", width=10,
@@ -305,6 +350,8 @@ class App:
             with open(ARCHIVO, "r", encoding="utf-8") as f:
                 datos = json.load(f)
             self.pos = (int(datos.get("x", 60)), int(datos.get("y", 60)))
+            esc = int(datos.get("escala", ESCALA_INICIAL))
+            self.escala = max(ESCALA_MIN, min(ESCALA_MAX, esc))
             return int(datos.get("cuenta", 0))
         except Exception:
             return 0
@@ -312,10 +359,35 @@ class App:
     def guardar(self):
         try:
             with open(ARCHIVO, "w", encoding="utf-8") as f:
-                json.dump({"cuenta": self.cuenta,
+                json.dump({"cuenta": self.cuenta, "escala": self.escala,
                            "x": self.pos[0], "y": self.pos[1]}, f)
         except Exception:
             pass
+
+    def poner_icono(self):
+        ico, png = ruta_recurso(ICONO_ICO), ruta_recurso(ICONO_PNG)
+        if ico and _get_key is not None:
+            try:
+                self.root.iconbitmap(ico)
+                return
+            except tk.TclError:
+                pass
+        if png:
+            try:
+                self._icono = tk.PhotoImage(file=png)
+                self.root.iconphoto(True, self._icono)
+            except tk.TclError:
+                pass
+
+    def cambiar_escala(self, valor):
+        nueva = int(float(valor))
+        self.lbl_escala.config(text=f"{nueva}%")
+        if nueva == self.escala:
+            return
+        self.escala = nueva
+        if self.contador is not None:
+            self.contador.cambiar_escala()
+        self.guardar()
 
     # --- Contador pequeño ---
     def alternar(self):
