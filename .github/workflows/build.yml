@@ -22,7 +22,7 @@ jobs:
         run: pip install pyinstaller
 
       - name: Crear el .exe
-        run: pyinstaller --onefile --noconsole --name ContadorCofres contador_cofres.py
+        run: pyinstaller --onefile --noconsole --name ContadorCofres --add-data "plantilla.png;." --add-data "fuentes;fuentes" contador_cofres.py
 
       - name: Publicar release con el .exe
         uses: softprops/action-gh-release@v2
